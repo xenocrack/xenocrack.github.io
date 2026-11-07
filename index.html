@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Xeno — инжектор и экзекутор скриптов для Roblox</title>
+  <meta name="description" content="Xeno — бесплатный внешний скрипт-экзекутор (инжектор) для Roblox на Windows: без ключей, открытый исходный код, быстрая инъекция Lua-скриптов. Возможности, системные требования и FAQ." />
+  <meta name="theme-color" content="#101011" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2334d399'/%3E%3Cpath d='M21 21 43 43 M43 21 21 43' stroke='%23101011' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #101011;
+      --bg-card: #17181a;
+      --bg-elev: rgba(255, 255, 255, 0.02);
+      --bg-elev2: rgba(255, 255, 255, 0.05);
+      --border: rgba(255, 255, 255, 0.09);
+      --border-strong: rgba(255, 255, 255, 0.14);
+      --text: #f4f4f5;
+      --text-soft: rgba(244, 244, 245, 0.85);
+      --muted: #a1a1aa;
+      --primary: #34d399;
+      --primary-bright: #4ade80;
+      --primary-dim: rgba(52, 211, 153, 0.12);
+      --primary-border: rgba(52, 211, 153, 0.4);
+      --amber-border: rgba(245, 158, 11, 0.4);
+      --amber-bg: rgba(245, 158, 11, 0.08);
+      --amber-text: #fde68a;
+      --amber-icon: #fbbf24;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    ::selection { background: rgba(52, 211, 153, 0.35); }
+
+    * { scrollbar-width: thin; scrollbar-color: #333 transparent; }
+
+    .container { max-width: 1152px; margin-inline: auto; padding-inline: 24px; }
+
+    .icon { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+    /* ---------- Кнопки ---------- */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;
+      border: 1px solid transparent; text-decoration: none; transition: all 0.2s ease;
+      font-family: inherit; white-space: nowrap;
+    }
+    .btn-lg { height: 48px; padding: 0 24px; font-size: 16px; }
+    .btn-sm { height: 36px; padding: 0 16px; font-size: 14px; }
+    .btn-primary { background: var(--primary); color: #101011; }
+    .btn-primary:hover { background: var(--primary-bright); transform: translateY(-1px); }
+    .btn-outline { border-color: var(--border-strong); color: var(--text); background: var(--bg-elev); }
+    .btn-outline:hover { background: var(--bg-elev2); }
+
+    /* ---------- Бейджи ---------- */
+    .badge {
+      display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 999px;
+      border: 1px solid var(--border); font-size: 12.5px; font-weight: 500; color: var(--muted);
+    }
+    .badge-green { border-color: var(--primary-border); background: var(--primary-dim); color: var(--primary); }
+
+    /* ---------- Навигация ---------- */
+    .navbar { position: sticky; top: 0; z-index: 50; border-bottom: 1px solid transparent; transition: all 0.2s ease; }
+    .navbar.scrolled { background: rgba(16, 16, 17, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom-color: var(--border); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+    .logo-icon { width: 32px; height: 32px; border-radius: 9px; background: var(--primary); color: #101011; display: grid; place-items: center; }
+    .logo-icon .icon { width: 18px; height: 18px; stroke-width: 2.75; }
+    .logo-name { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+    .logo-chip { border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; font-size: 11px; color: var(--muted); font-weight: 500; }
+    .nav-links { display: flex; align-items: center; gap: 4px; }
+    .nav-links a { padding: 8px 12px; border-radius: 8px; color: var(--muted); font-size: 14px; text-decoration: none; transition: all 0.15s ease; }
+    .nav-links a:hover { background: var(--bg-elev2); color: var(--text); }
+    .nav-right { display: flex; align-items: center; gap: 8px; }
+    .burger { display: none; background: none; border: none; color: var(--text); cursor: pointer; padding: 8px; border-radius: 8px; }
+    .burger:hover { background: var(--bg-elev2); }
+    .mobile-nav { display: none; border-top: 1px solid var(--border); background: rgba(16, 16, 17, 0.95); backdrop-filter: blur(12px); }
+    .mobile-nav.open { display: block; }
+    .mobile-nav a { display: block; padding: 11px 12px; border-radius: 8px; color: var(--muted); font-size: 14px; text-decoration: none; }
+    .mobile-nav a:hover { background: var(--bg-elev2); color: var(--text); }
+    .mobile-nav .cta { display: block; margin-top: 8px; background: var(--primary); color: #101011; text-align: center; font-weight: 600; }
+
+    /* ---------- Hero ---------- */
+    .hero { position: relative; overflow: hidden; }
+    .hero::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background-image: linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 44px 44px;
+      -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 20%, black, transparent);
+      mask-image: radial-gradient(ellipse 60% 60% at 50% 20%, black, transparent);
+    }
+    .hero::after {
+      content: ""; position: absolute; top: -128px; left: 50%; transform: translateX(-50%);
+      width: 42rem; height: 384px; border-radius: 999px; background: rgba(52, 211, 153, 0.1);
+      filter: blur(72px); pointer-events: none;
+    }
+    .hero-grid {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: center;
+      padding-block: 64px 80px;
+    }
+    .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    h1 { font-size: clamp(2.2rem, 4.6vw, 3.35rem); font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; }
+    .grad {
+      background: linear-gradient(90deg, #6ee7b7, #34d399 45%, #bef264);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 0 24px rgba(52, 211, 153, 0.4));
+    }
+    .hero-sub { margin-top: 20px; max-width: 36rem; color: var(--muted); font-size: 16.5px; }
+    .hero-actions { margin-top: 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+    .hero-hint { margin-top: 12px; font-size: 12px; color: var(--muted); }
+    .hero-chips { margin-top: 32px; display: flex; flex-wrap: wrap; column-gap: 20px; row-gap: 8px; list-style: none; font-size: 14px; color: var(--muted); }
+    .hero-chips li { display: flex; align-items: center; gap: 6px; }
+    .hero-chips .icon { width: 16px; height: 16px; color: var(--primary); }
+    .term-caption { margin-top: 12px; text-align: center; font-size: 12px; color: var(--muted); }
+
+    /* ---------- Терминал ---------- */
+    .terminal { border: 1px solid var(--border); border-radius: 12px; background: rgba(9, 9, 11, 0.92); overflow: hidden;
+      box-shadow: 0 0 80px -20px rgba(52, 211, 153, 0.4), 0 0 24px -12px rgba(52, 211, 153, 0.3); }
+    .term-bar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.03); }
+    .dot { width: 12px; height: 12px; border-radius: 999px; }
+    .dot-r { background: rgba(239, 68, 68, 0.8); } .dot-y { background: rgba(234, 179, 8, 0.8); } .dot-g { background: rgba(34, 197, 94, 0.8); }
+    .term-title { margin-left: 8px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+    .term-body { padding: 16px; min-height: 224px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; line-height: 24px; }
+    .t-green { color: var(--primary); } .t-muted { color: var(--muted); } .t-light { color: var(--text-soft); }
+    .caret { display: inline-block; width: 8px; height: 14px; background: var(--primary); transform: translateY(2px); margin-left: 2px; animation: blink 0.9s step-end infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    /* ---------- Статистика ---------- */
+    .stats { border-block: 1px solid var(--border); background: var(--bg-elev); }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; padding-block: 40px; }
+    .stat { text-align: center; }
+    .stat-value { font-size: clamp(1.8rem, 3vw, 2.25rem); font-weight: 800; letter-spacing: -0.02em; color: var(--primary); }
+    .stat-label { margin-top: 6px; font-size: 14px; font-weight: 500; color: var(--text-soft); }
+    .stat-hint { font-size: 12px; color: var(--muted); }
+    .stats-note { padding-bottom: 24px; text-align: center; font-size: 11px; color: var(--muted); }
+
+    /* ---------- Секции ---------- */
+    section.block { padding-block: 80px; }
+    .section-head { max-width: 42rem; margin-inline: auto; text-align: center; }
+    h2 { font-size: clamp(1.8rem, 3vw, 2.25rem); font-weight: 700; letter-spacing: -0.02em; }
+    .section-sub { margin-top: 16px; color: var(--muted); font-size: 15.5px; }
+
+    .features-grid { margin-top: 48px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .card { background: rgba(23, 24, 26, 0.6); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: border-color 0.2s ease; height: 100%; }
+    .card:hover { border-color: var(--primary-border); }
+    .card-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--primary-dim); color: var(--primary); display: grid; place-items: center; margin-bottom: 16px; }
+    .card h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+    .card p { font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+    .band { border-block: 1px solid var(--border); background: var(--bg-elev); }
+    .steps { margin-top: 48px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; list-style: none; counter-reset: step; }
+    .step { position: relative; background: rgba(23, 24, 26, 0.6); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .step-top { display: flex; align-items: center; justify-content: space-between; }
+    .step-num { font-size: 36px; font-weight: 800; color: rgba(52, 211, 153, 0.3); }
+    .step-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--primary-dim); color: var(--primary); display: grid; place-items: center; }
+    .step h3 { margin-top: 16px; font-size: 17px; font-weight: 600; }
+    .step p { margin-top: 8px; font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+    /* ---------- Требования ---------- */
+    .table-wrap { margin-top: 40px; border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 560px; }
+    thead th { background: rgba(23, 24, 26, 0.8); text-align: left; padding: 13px 16px; font-size: 13.5px; font-weight: 500; color: var(--text); }
+    thead th:last-child { color: var(--primary); }
+    tbody td { padding: 13px 16px; border-top: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+    tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+    td.name { font-weight: 500; color: var(--text); white-space: nowrap; }
+    td.name span { display: inline-flex; align-items: center; gap: 8px; }
+    td.name .icon { width: 16px; height: 16px; color: rgba(52, 211, 153, 0.7); }
+    td.min { color: var(--muted); }
+    td.rec { color: var(--text-soft); }
+    .reqs-note { margin-top: 16px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .reqs-note .icon { width: 14px; height: 14px; color: rgba(52, 211, 153, 0.7); }
+
+    /* ---------- FAQ ---------- */
+    .faq-list { margin-top: 40px; }
+    details.faq { border-bottom: 1px solid var(--border); }
+    details.faq summary {
+      list-style: none; cursor: pointer; padding: 20px 0; font-size: 15.5px; font-weight: 500;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; transition: color 0.15s ease;
+    }
+    details.faq summary::-webkit-details-marker { display: none; }
+    details.faq summary:hover { color: var(--primary); }
+    .chev { width: 18px; height: 18px; color: var(--muted); transition: transform 0.2s ease; flex-shrink: 0; }
+    details[open].faq summary { color: var(--text); }
+    details[open].faq .chev { transform: rotate(180deg); color: var(--primary); }
+    .faq-a { padding: 0 32px 20px 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+
+    .alert { margin-top: 48px; display: flex; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid var(--amber-border); background: var(--amber-bg); }
+    .alert .icon { color: var(--amber-icon); margin-top: 3px; }
+    .alert-title { color: var(--amber-text); font-weight: 600; font-size: 14.5px; }
+    .alert-text { margin-top: 4px; color: rgba(253, 230, 138, 0.8); font-size: 13.5px; line-height: 1.65; }
+
+    /* ---------- Футер ---------- */
+    footer { margin-top: auto; border-top: 1px solid var(--border); background: rgba(23, 24, 26, 0.4); }
+    .footer-top { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding-block: 40px; }
+    .footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; font-size: 14px; color: var(--muted); }
+    .footer-links a { color: var(--muted); text-decoration: none; transition: color 0.15s ease; }
+    .footer-links a:hover { color: var(--text); }
+    .footer-links a.dl { color: var(--primary); font-weight: 500; }
+    .footer-links a.dl:hover { color: var(--text); }
+    .footer-note { padding-bottom: 40px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+    /* ---------- Анимации появления ---------- */
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.5s ease var(--d, 0s), transform 0.5s ease var(--d, 0s); }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .reveal { opacity: 1; transform: none; transition: none; }
+      .caret { animation: none; }
+    }
+
+    /* ---------- Адаптивность ---------- */
+    @media (max-width: 1023px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 40px; padding-block: 48px 64px; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .steps { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 767px) {
+      .nav-links { display: none; }
+      .burger { display: block; }
+      section.block { padding-block: 56px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    }
+    @media (max-width: 639px) {
+      .nav-cta { display: none; }
+      .logo-chip { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .hero-actions .btn-lg { width: 100%; }
+      .container { padding-inline: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ---------- Навигация ---------- -->
+  <header class="navbar" id="navbar">
+    <div class="container nav-inner">
+      <a class="logo" href="#top" aria-label="Xeno — на главную">
+        <span class="logo-icon">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </span>
+        <span class="logo-name">XENO</span>
+        <span class="logo-chip">для Roblox</span>
+      </a>
+      <nav class="nav-links" aria-label="Основная навигация">
+        <a href="#features">Возможности</a>
+        <a href="#how">Как работает</a>
+        <a href="#reqs">Требования</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <div class="nav-right">
+        <a class="btn btn-primary btn-sm nav-cta" href="https://github.com/dellaclient/Xeno/archive/refs/heads/main.zip" target="_blank" rel="noreferrer" download>Скачать</a>
+        <button class="burger" id="burger" aria-label="Открыть меню" aria-expanded="false">
+          <svg class="icon" id="burger-icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Мобильная навигация">
+      <div class="container" style="padding-block: 12px;">
+        <a href="#features">Возможности</a>
+        <a href="#how">Как работает</a>
+        <a href="#reqs">Требования</a>
+        <a href="#faq">FAQ</a>
+        <a class="cta" href="https://github.com/dellaclient/Xeno/archive/refs/heads/main.zip" target="_blank" rel="noreferrer" download>Скачать Xeno</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ---------- Hero ---------- -->
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <div class="hero-badges">
+            <span class="badge badge-green">Бесплатно • Без ключей</span>
+            <span class="badge">Open Source</span>
+            <span class="badge">Windows 10 / 11</span>
+          </div>
+          <h1><span class="grad">Xeno</span> — инжектор скриптов для Roblox</h1>
+          <p class="hero-sub">
+            Внешний экзекутор на C++: внедряется в процесс Roblox и выполняет ваши
+            Lua-скрипты за доли секунды. Без системы ключей, подписок и лишних шагов —
+            установил, нажал Inject, запустил скрипт.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary btn-lg" href="https://github.com/dellaclient/Xeno/archive/refs/heads/main.zip" target="_blank" rel="noreferrer" download>
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              Скачать для Windows
+            </a>
+            <a class="btn btn-outline btn-lg" href="https://github.com/dellaclient/Xeno" target="_blank" rel="noreferrer">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+              GitHub
+            </a>
+          </div>
+          <p class="hero-hint">Файл Xeno-main.zip начнёт скачиваться сразу после нажатия.</p>
+          <ul class="hero-chips">
+            <li><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Keyless — без ключей</li>
+            <li><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>UNC Level 7</li>
+            <li><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Android Beta</li>
+            <li><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Постоянные обновления</li>
+          </ul>
+        </div>
+        <div>
+          <div class="terminal" role="img" aria-label="Демонстрация работы Xeno в терминале: инъекция в процесс Roblox и выполнение скрипта">
+            <div class="term-bar">
+              <span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span>
+              <span class="term-title">xeno.exe — терминал</span>
+            </div>
+            <div class="term-body" id="term-body"></div>
+          </div>
+          <p class="term-caption">Так выглядит типичная инъекция Xeno в процесс Roblox</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- Статистика ---------- -->
+    <section class="stats">
+      <div class="container">
+        <div class="stats-grid">
+          <div class="stat reveal"><div class="stat-value">98%</div><div class="stat-label">успешных UNC-тестов*</div><div class="stat-hint">по данным сообщества</div></div>
+          <div class="stat reveal" style="--d:.06s"><div class="stat-value">0 ₽</div><div class="stat-label">цена и подписки</div><div class="stat-hint">полностью бесплатный</div></div>
+          <div class="stat reveal" style="--d:.12s"><div class="stat-value">&lt;1 с</div><div class="stat-label">инъекция в игру</div><div class="stat-hint">среднее время</div></div>
+          <div class="stat reveal" style="--d:.18s"><div class="stat-value">100%</div><div class="stat-label">открытый код</div><div class="stat-hint">доступен на GitHub</div></div>
+        </div>
+        <p class="stats-note">* Результаты тестов совместимости UNC по данным сообщества и не являются официальной гарантией.</p>
+      </div>
+    </section>
+
+    <!-- ---------- Возможности ---------- -->
+    <section class="block" id="features" style="scroll-margin-top: 96px;">
+      <div class="container">
+        <div class="section-head reveal">
+          <h2>Возможности Xeno</h2>
+          <p class="section-sub">Всё нужное для комфортной работы со скриптами — в одном легком окне без лишних настроек.</p>
+        </div>
+        <div class="features-grid">
+          <div class="card reveal">
+            <div class="card-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <h3>Мгновенное выполнение</h3>
+            <p>Скрипты запускаются сразу после нажатия Execute — без задержек и фризов в игре. Поддержка Lua и Luau.</p>
+          </div>
+          <div class="card reveal" style="--d:.08s">
+            <div class="card-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></div>
+            <h3>Высокая совместимость</h3>
+            <p>По данным сообщества, Xeno проходит большинство тестов совместимости UNC — сложные скрипты и хабы работают стабильно.</p>
+          </div>
+          <div class="card reveal" style="--d:.16s">
+            <div class="card-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg></div>
+            <h3>Встроенный редактор</h3>
+            <p>Редактор кода с подсветкой синтаксиса прямо в окне программы: вставил скрипт — и сразу запустил.</p>
+          </div>
+          <div class="card reveal">
+            <div class="card-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m10 13-2 2 2 2"/><path d="m14 17 2-2-2-2"/><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></div>
+            <h3>Каталог скриптов</h3>
+            <p>Быстро подгружайте готовые community-скрипты и хабы через loadstring или сохраняйте свои в библиотеку.</p>
+          </div>
+          <div class="card reveal" style="--d:.08s">
+            <div class="card-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></div>
+            <h3>Автообновления</h3>
+            <p>Xeno синхронизируется с обновлениями Roblox: после патчей игры обычно достаточно перезайти или обновить версию.</p>
+          </div>
+          <div class="card reveal" style="--d:.16s">
+            <div class="card-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg></div>
+            <h3>Открытый исходный код</h3>
+            <p>Код проекта опубликован на GitHub — сообщество может самостоятельно изучать, как устроен инжектор.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- Как это работает ---------- -->
+    <section class="band block" id="how" style="scroll-margin-top: 96px;">
+      <div class="container">
+        <div class="section-head reveal">
+          <h2>Как это работает</h2>
+          <p class="section-sub">Три шага от установки до работающего скрипта.</p>
+        </div>
+        <ol class="steps">
+          <li class="step reveal">
+            <div class="step-top">
+              <span class="step-num">01</span>
+              <span class="step-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></span>
+            </div>
+            <h3>Скачайте и распакуйте</h3>
+            <p>Загрузите архив Xeno, распакуйте в отдельную папку и добавьте её в исключения антивируса.</p>
+          </li>
+          <li class="step reveal" style="--d:.1s">
+            <div class="step-top">
+              <span class="step-num">02</span>
+              <span class="step-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 11 4 4"/><path d="m5 19-3 3"/><path d="m14 4 6 6"/></svg></span>
+            </div>
+            <h3>Нажмите Inject</h3>
+            <p>Запустите Xeno от имени администратора, откройте Roblox и нажмите Inject — инъекция занимает меньше секунды.</p>
+          </li>
+          <li class="step reveal" style="--d:.2s">
+            <div class="step-top">
+              <span class="step-num">03</span>
+              <span class="step-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+            </div>
+            <h3>Выполняйте скрипты</h3>
+            <p>Вставьте Lua-скрипт в редактор или загрузите хаб из каталога и нажмите Execute.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ---------- Системные требования ---------- -->
+    <section class="block" id="reqs" style="scroll-margin-top: 96px;">
+      <div class="container">
+        <div class="section-head reveal">
+          <h2>Системные требования</h2>
+          <p class="section-sub">Xeno нетребователен к железу — он работает даже на слабых ПК.</p>
+        </div>
+        <div class="table-wrap reveal" style="--d:.05s">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 28%;">Компонент</th>
+                <th>Минимальные</th>
+                <th style="color: var(--primary);">Рекомендуемые</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="name"><span>Операционная система</span></td>
+                <td class="min">Windows 10 64-bit (сборка 19041+)</td>
+                <td class="rec">Windows 11</td>
+              </tr>
+              <tr>
+                <td class="name"><span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg>Процессор</span></td>
+                <td class="min">Intel Core i3 / AMD Ryzen 3</td>
+                <td class="rec">Intel Core i5 / AMD Ryzen 5</td>
+              </tr>
+              <tr>
+                <td class="name"><span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19v-3"/><path d="M10 19v-3"/><path d="M14 19v-3"/><path d="M18 19v-3"/><path d="M8 11V9"/><path d="M16 11V9"/><path d="M12 11V9"/><path d="M2 15h20"/><path d="M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1Z"/></svg>Оперативная память</span></td>
+                <td class="min">4 ГБ</td>
+                <td class="rec">8 ГБ</td>
+              </tr>
+              <tr>
+                <td class="name"><span><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></svg>Место на диске</span></td>
+                <td class="min">200 МБ</td>
+                <td class="rec">500 МБ</td>
+              </tr>
+              <tr>
+                <td class="name"><span>Дополнительно</span></td>
+                <td class="min">.NET 6.0+, Visual C++ Redistributable 2022</td>
+                <td class="rec">DirectX 11-совместимая графика</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="reqs-note reveal" style="--d:.1s">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+          Требуется подключение к интернету для инъекции и автообновлений.
+        </p>
+      </div>
+    </section>
+
+    <!-- ---------- FAQ ---------- -->
+    <section class="block" id="faq" style="scroll-margin-top: 96px; padding-top: 0;">
+      <div class="container" style="max-width: 768px;">
+        <div class="section-head reveal">
+          <h2>Частые вопросы</h2>
+          <p class="section-sub">Коротко о самом важном перед началом работы с Xeno.</p>
+        </div>
+        <div class="faq-list reveal" style="--d:.05s">
+          <details class="faq">
+            <summary>Что такое Xeno и как он работает?<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="faq-a">Xeno — это бесплатный внешний скрипт-экзекутор (инжектор) для Roblox, написанный на C++. Программа внедряет собственный Lua-движок в процесс игры, после чего вы можете выполнять любые пользовательские скрипты прямо из окна Xeno.</p>
+          </details>
+          <details class="faq">
+            <summary>Сколько стоит Xeno? Нужен ли ключ?<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="faq-a">Xeno полностью бесплатен и не требует ключей (keyless): никаких подписок, рекламных зеркал и ожидания. Скачайте программу, запустите — и пользуйтесь.</p>
+          </details>
+          <details class="faq">
+            <summary>Это безопасно?<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="faq-a">Проект с открытым исходным кодом, что делает его прозрачнее закрытых аналогов. Тем не менее антивирусы могут ложно реагировать на файлы инжектора, а сторонние скрипты из интернета могут содержать вредоносный код. Скачивайте Xeno только из проверенных источников и тестируйте незнакомые скрипты на вторичном аккаунте.</p>
+          </details>
+          <details class="faq">
+            <summary>Могут ли заблокировать мой аккаунт Roblox?<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="faq-a">Да, риск есть. Использование экзекуторов и модификаций клиента нарушает условия использования Roblox (ToS), поэтому аккаунт может быть заблокирован навсегда. Учитывайте это и не используйте основной аккаунт.</p>
+          </details>
+          <details class="faq">
+            <summary>Работает ли Xeno на телефоне?<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="faq-a">Основная платформа Xeno — Windows 10 и 11 (64-bit). Существует бета-версия для Android (APK), но мобильная сборка менее стабильна, чем ПК-версия.</p>
+          </details>
+          <details class="faq">
+            <summary>Xeno перестал работать после обновления Roblox. Что делать?<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="faq-a">После крупных патчей Roblox инжектору нужно обновление. Установите последнюю версию с GitHub или подождите патч от команды разработки, а затем повторите инъекцию. Проверяйте анонсы в сообществе проекта.</p>
+          </details>
+        </div>
+
+        <div class="alert reveal" style="--d:.1s" role="alert">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+          <div>
+            <div class="alert-title">Важно: риск блокировки аккаунта</div>
+            <p class="alert-text">Использование инжекторов и экзекуторов нарушает правила Roblox (ToS). Аккаунт может быть заблокирован навсегда. Этот сайт носит информационный характер: мы не связаны с Roblox Corporation и командой разработчиков Xeno, а все решения вы принимаете сами.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ---------- Футер ---------- -->
+  <footer>
+    <div class="container">
+      <div class="footer-top">
+        <div class="logo">
+          <span class="logo-icon">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </span>
+          <div>
+            <div class="logo-name" style="font-size: 14px;">XENO</div>
+            <div style="font-size: 12px; color: var(--muted);">фан-сайт о скрипт-экзекуторе для Roblox</div>
+          </div>
+        </div>
+        <nav class="footer-links" aria-label="Ссылки в подвале">
+          <a class="dl" href="https://github.com/dellaclient/Xeno/archive/refs/heads/main.zip" target="_blank" rel="noreferrer" download>Скачать</a>
+          <a href="https://github.com/dellaclient/Xeno" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://www.roblox.com" target="_blank" rel="noreferrer">Roblox</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+      </div>
+      <p class="footer-note">© 2026 Xeno Fan Site. Сайт создан в информационных целях и не является официальным ресурсом Xeno или Roblox Corporation. Roblox — товарный знак Roblox Corporation. Использование экзекуторов нарушает правила Roblox и может привести к блокировке аккаунта.</p>
+    </div>
+  </footer>
+
+  <script>
+    // ---------- Навигация: фон при прокрутке ----------
+    var navbar = document.getElementById("navbar");
+    function onScroll() { navbar.classList.toggle("scrolled", window.scrollY > 8); }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+
+    // ---------- Мобильное меню ----------
+    var burger = document.getElementById("burger");
+    var mobileNav = document.getElementById("mobile-nav");
+    var burgerIcon = document.getElementById("burger-icon");
+    var menuOpen = false;
+    var ICON_MENU = '<line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/>';
+    var ICON_CLOSE = '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
+
+    function setMenu(open) {
+      menuOpen = open;
+      mobileNav.classList.toggle("open", open);
+      burger.setAttribute("aria-expanded", String(open));
+      burger.setAttribute("aria-label", open ? "Закрыть меню" : "Открыть меню");
+      burgerIcon.innerHTML = open ? ICON_CLOSE : ICON_MENU;
+    }
+    burger.addEventListener("click", function () { setMenu(!menuOpen); });
+    mobileNav.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () { setMenu(false); });
+    });
+
+    // ---------- Появление секций при прокрутке ----------
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); io.unobserve(e.target); }
+      });
+    }, { rootMargin: "0px 0px -60px 0px" });
+    document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
+
+    // ---------- Анимация терминала ----------
+    var TERM_LINES = [
+      { t: "$ xeno.exe --attach RobloxPlayerBeta.exe", c: "t-green" },
+      { t: "[..] Поиск процесса Roblox...", c: "t-muted" },
+      { t: "[OK] Процесс найден (PID 8420)", c: "t-light" },
+      { t: "[..] Внедрение в Lua-VM...", c: "t-muted" },
+      { t: "[OK] Инъекция завершена за 0.42s", c: "t-green" },
+      { t: '$ loadstring(game:HttpGet("script.lua"))()', c: "t-light" },
+      { t: "[OK] Скрипт выполнен без ошибок", c: "t-green" }
+    ];
+    var termBody = document.getElementById("term-body");
+
+    function runTerminal() {
+      var li = 0, ci = 0, partial = null;
+      termBody.innerHTML = "";
+
+      function renderPartial(text, cls) {
+        if (partial) partial.remove();
+        partial = document.createElement("div");
+        partial.className = cls;
+        partial.textContent = text;
+        var caret = document.createElement("span");
+        caret.className = "caret";
+        partial.appendChild(caret);
+        termBody.appendChild(partial);
+      }
+
+      function tick() {
+        if (li >= TERM_LINES.length) {
+          setTimeout(function () { runTerminal(); }, 4200);
+          return;
+        }
+        var line = TERM_LINES[li];
+        ci += 1;
+        renderPartial(line.t.slice(0, ci), line.c);
+        if (ci >= line.t.length) {
+          partial.classList.remove("caret-holder");
+          partial.textContent = line.t;
+          partial = null;
+          li += 1; ci = 0;
+          setTimeout(tick, li === 1 ? 450 : 220);
+        } else {
+          setTimeout(tick, line.t.charAt(0) === "$" ? 36 : 22);
+        }
+      }
+      tick();
+    }
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      runTerminal();
+    } else {
+      TERM_LINES.forEach(function (l) {
+        var d = document.createElement("div");
+        d.className = l.c;
+        d.textContent = l.t;
+        termBody.appendChild(d);
+      });
+    }
+
+    // ---------- FAQ: открывать только один пункт ----------
+    document.querySelectorAll("details.faq").forEach(function (d) {
+      d.addEventListener("toggle", function () {
+        if (d.open) {
+          document.querySelectorAll("details.faq[open]").forEach(function (o) {
+            if (o !== d) o.open = false;
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
